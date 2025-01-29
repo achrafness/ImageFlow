@@ -11,7 +11,6 @@ from PyQt6.QtCore import Qt, QThread, pyqtSignal, QSize
 from PyQt6.QtGui import QIcon, QFont, QPalette, QColor, QPixmap
 
 from core.image_converter import ImageConverter
-from database.conversion_history import ConversionHistoryDB
 
 class StyleHelper:
     @staticmethod
@@ -67,57 +66,6 @@ class StyleHelper:
             }
         """)
 
-class ConversionHistoryDialog(QDialog):
-    def __init__(self, history_db):
-        super().__init__()
-        self.history_db = history_db
-        self.setWindowTitle("Conversion History")
-        self.setGeometry(200, 200, 800, 400)
-
-        layout = QVBoxLayout()
-        
-        # History Table
-        self.history_table = QTableWidget()
-        self.history_table.setColumnCount(5)
-        self.history_table.setHorizontalHeaderLabels(
-            ["Source Path", "Destination Path", "Input Format", "Output Format", "Conversion Time"]
-        )
-        self.history_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
-        
-        layout.addWidget(self.history_table)
-
-        # Buttons
-        button_layout = QHBoxLayout()
-        clear_btn = QPushButton("Clear History")
-        clear_btn.clicked.connect(self.clear_history)
-        button_layout.addWidget(clear_btn)
-
-        layout.addLayout(button_layout)
-        self.setLayout(layout)
-
-        self.load_history()
-
-    def load_history(self):
-        """Load conversion history into the table."""
-        history = self.history_db.get_conversion_history()
-        self.history_table.setRowCount(len(history))
-        
-        for row, record in enumerate(history):
-            for col, value in enumerate(record):
-                self.history_table.setItem(row, col, QTableWidgetItem(str(value)))
-
-    def clear_history(self):
-        """Clear conversion history."""
-        reply = QMessageBox.question(
-            self, 'Clear History', 
-            "Are you sure you want to clear all conversion history?",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
-        )
-        
-        if reply == QMessageBox.StandardButton.Yes:
-            self.history_db.clear_history()
-            self.load_history()
-
 class ConversionThread(QThread):
     conversion_progress = pyqtSignal(int, int)
     conversion_complete = pyqtSignal(list)
@@ -143,14 +91,11 @@ class ImageFlowMainWindow(QMainWindow):
         super().__init__()
         self.setWindowTitle("ImageFlow - Image Converter")
         self.setGeometry(100, 100, 1000, 700)
-        self.setWindowIcon(QIcon('icon.png'))  # Add your app icon
+        self.setWindowIcon(QIcon('icon.png'))  
 
         # Setup logging
         logging.basicConfig(level=logging.INFO, 
                             format='%(asctime)s - %(levelname)s: %(message)s')
-
-        # Database for tracking
-        self.history_db = ConversionHistoryDB()
 
         # Central widget and main layout
         central_widget = QWidget()
@@ -208,15 +153,11 @@ class ImageFlowMainWindow(QMainWindow):
         convert_btn = QPushButton("Convert Images")
         convert_btn.setIcon(QIcon('convert_icon.png'))  # Use appropriate icon
 
-        # History Button
-        history_btn = QPushButton("View Conversion History")
-        history_btn.setIcon(QIcon('history_icon.png'))  # Use appropriate icon
 
         # Add to Conversion Layout
         conversion_layout.addWidget(files_group)
         conversion_layout.addWidget(options_group)
         conversion_layout.addWidget(convert_btn)
-        conversion_layout.addWidget(history_btn)
         conversion_layout.addWidget(self.progress_label)
         conversion_layout.addWidget(self.progress_bar)
 
@@ -233,7 +174,6 @@ class ImageFlowMainWindow(QMainWindow):
         remove_files_btn.clicked.connect(self.remove_files)
         self.output_dir_btn.clicked.connect(self.select_output_directory)
         convert_btn.clicked.connect(self.start_conversion)
-        history_btn.clicked.connect(self.show_history)
 
     def select_output_directory(self):
         """Select output directory for conversions."""
@@ -291,10 +231,6 @@ class ImageFlowMainWindow(QMainWindow):
         QMessageBox.information(self, "Conversion Complete", 
                                 f"{len(converted_files)} images successfully converted.")
 
-    def show_history(self):
-        """Show conversion history dialog."""
-        history_dialog = ConversionHistoryDialog(self.history_db)
-        history_dialog.exec()
 
 def main():
     app = QApplication(sys.argv)
