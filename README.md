@@ -5,7 +5,6 @@ There are already many free online solutions, but when we have a decent amount o
 
 ## Technologies used
 - PyQt6.
-- SQLite3.
 - more later... :)
 
 ## Installation
