@@ -1,45 +1,56 @@
 import os
+import time
 import sys
 import logging
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QPushButton, QVBoxLayout, QHBoxLayout, 
     QLabel, QFileDialog, QComboBox, QListWidget, QWidget, QMessageBox, 
     QProgressBar, QGroupBox, QTabWidget, QTableWidget, QTableWidgetItem,
-    QHeaderView, QDialog, QGridLayout
+    QHeaderView, QDialog, QGridLayout, QSplashScreen
 )
-from PyQt6.QtCore import Qt, QThread, pyqtSignal, QSize
+from PyQt6.QtCore import Qt, QThread, pyqtSignal, QSize, QTimer
 from PyQt6.QtGui import QIcon, QFont, QPalette, QColor, QPixmap
 
 from core.image_converter import ImageConverter
+
+
+# class SplashScreen(QSplashScreen):
+#     def __init__(self):
+#         super().__init__()
+#         # Load splash image (Make sure the file exists in the correct path)
+#         pixmap = QPixmap("graphics/splash.png")  # Replace with your splash screen image
+#         self.setPixmap(pixmap)
+#         self.setWindowFlags(Qt.WindowType.FramelessWindowHint)  # Removes the window border
+#         self.show()
 
 class StyleHelper:
     # Theme color definitions
     THEMES = {
         'dark': {
-            'primary': '#2D3250',      # Deep blue-grey
-            'secondary': '#424769',    # Lighter blue-grey
-            'accent': '#7077A1',       # Muted purple-blue
-            'background': '#1C1E2A',   # Dark background
-            'surface': '#2A2D3F',      # Slightly lighter than background
+            'primary': '#38410b',      # Deep blue-grey
+            'secondary': '#596711',    # Lighter blue-grey
+            'accent': '#7c910f',       # Muted purple-blue
+            'background': '#101010',   # Dark background
+            'surface': '#242621',      # Slightly lighter than background
             'text': '#F6F6F6',         # Off-white
             'text_secondary': '#B4B4B4', # Muted text
             'success': '#4CAF50',      # Green
             'error': '#F44336',        # Red
             'warning': '#FF9800',      # Orange
-            'border': '#424769'        # Border color
+            'border': '#596711'        # Border color
         },
         'light': {
-            'primary': '#5B63A8',      # Deep blue
-            'secondary': '#8F97D4',    # Lighter blue
-            'accent': '#6D75BE',       # Medium blue
-            'background': '#FFFFFF',   # White background
-            'surface': '#F5F7FA',      # Light grey surface
-            'text': '#2C3E50',         # Dark grey text
-            'text_secondary': '#606F7B', # Medium grey text
-            'success': '#4CAF50',      # Green
-            'error': '#F44336',        # Red
-            'warning': '#FF9800',      # Orange
-            'border': '#E2E8F0'        # Border color
+            'primary': '#2E4E1A',      # Rich, earthy green (matches dark mode depth)
+            'secondary': '#5F7A41',    # Softer green with warmth
+            'accent': '#A3C232',       # Vibrant yet natural accent
+            'background': '#FAFAF5',   # Slightly off-white for softness
+            'surface': '#EFF0E8',      # Gentle contrast for UI elements
+            'text': '#2C3A1F',         # Darker greenish-grey for high readability
+            'text_secondary': '#6F8054', # Softer muted text
+            'success': '#4CAF50',      # Consistent success green
+            'error': '#D6453D',        # Slightly softened red
+            'warning': '#E8A20C',      # Warmer orange for warning
+            'border': '#5F7A41'        # Harmonizing border color
         }
     }
 
@@ -101,7 +112,7 @@ class StyleHelper:
                 background-color: transparent;
                 border: 1px solid {colors['accent']};
                 min-width: 40px;
-                padding: 4px 8px;
+                padding: 1px 2px;
             }}
             
             QGroupBox {{
@@ -157,7 +168,10 @@ class StyleHelper:
             }}
             
             QComboBox::down-arrow {{
-                image: url({'dark_arrow.png' if theme == 'dark' else 'light_arrow.png'});
+                width: 16px;
+                height: 16px;
+                margin-right: 6px;
+                image: url({"ui/graphics/drk_dwn.png" if theme == 'dark' else "ui/graphics/lt_dwn.png"});
             }}
             
             QComboBox QAbstractItemView {{
@@ -185,9 +199,9 @@ class StyleHelper:
             QTabWidget::pane {{
                 border: 1px solid {colors['border']};
                 background-color: {colors['surface']};
-                border-radius: 8px;
+                border-radius: 0px;
             }}
-            
+            QIcon{{margin: 4px;}}
             QTabBar::tab {{
                 background-color: {colors['primary']};
                 color: {'#FFFFFF' if theme == 'dark' else '#FFFFFF'};
@@ -204,6 +218,8 @@ class StyleHelper:
             QLabel {{
                 color: {colors['text']};
                 font-size: 14px;
+                border-radius: 4px;
+                padding-left: 4px;
             }}
             
             QMessageBox {{
@@ -247,8 +263,8 @@ class ImageFlowMainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("ImageFlow - Image Converter")
-        self.setGeometry(100, 100, 1000, 700)
-        self.setWindowIcon(QIcon('icon.png'))  
+        self.setGeometry(650, 100, 555, 910)
+        self.setWindowIcon(QIcon('ui/graphics/logo.ico'))  
 
         # Setup logging
         logging.basicConfig(level=logging.INFO, 
@@ -263,7 +279,7 @@ class ImageFlowMainWindow(QMainWindow):
         header_layout = QHBoxLayout()
         self.theme_toggle = QPushButton()
         self.theme_toggle.setObjectName("themeToggleButton")
-        self.theme_toggle.setIcon(QIcon('moon.png'))  # You'll need to add these icons
+        self.theme_toggle.setIcon(QIcon('ui/graphics/dark.png'))  # You'll need to add these icons
         self.theme_toggle.setFixedSize(40, 40)
         self.theme_toggle.setToolTip("Toggle Dark/Light Mode")
         self.theme_toggle.clicked.connect(self.toggle_theme)
@@ -285,18 +301,18 @@ class ImageFlowMainWindow(QMainWindow):
         self.files_list = QListWidget()
         
         # File Actions Buttons
-        file_actions_layout = QVBoxLayout()
-        add_files_btn = QPushButton("Add Files")
-        add_files_btn.setIcon(QIcon('add_icon.png'))
-        remove_files_btn = QPushButton("Remove Files")
-        remove_files_btn.setIcon(QIcon('remove_icon.png'))
+        # file_actions_layout = QVBoxLayout()
+        # add_files_btn = QPushButton("Add Files")
+        # add_files_btn.setIcon(QIcon('add_icon.png'))
+        # remove_files_btn = QPushButton("Remove Files")
+        # remove_files_btn.setIcon(QIcon('remove_icon.png'))
         
-        file_actions_layout.addWidget(add_files_btn)
-        file_actions_layout.addWidget(remove_files_btn)
-        file_actions_layout.addStretch(1)
+        # file_actions_layout.addWidget(add_files_btn)
+        # file_actions_layout.addWidget(remove_files_btn)
+        # file_actions_layout.addStretch(1)
 
-        files_layout.addWidget(self.files_list)
-        files_layout.addLayout(file_actions_layout)
+        # files_layout.addWidget(self.files_list)
+        # files_layout.addLayout(file_actions_layout)
 
                 # File Actions Buttons
         file_actions_layout = QVBoxLayout()
@@ -368,11 +384,10 @@ class ImageFlowMainWindow(QMainWindow):
         if self.current_theme == "light":
             StyleHelper.apply_theme(app, "dark")
             self.current_theme = "dark"
-            self.theme_toggle.setIcon(QIcon('sun.png'))
+
         else:
             StyleHelper.apply_theme(app, "light")
             self.current_theme = "light"
-            self.theme_toggle.setIcon(QIcon('moon.png'))
             
     def select_output_directory(self):
         """Select output directory for conversions."""
@@ -431,10 +446,32 @@ class ImageFlowMainWindow(QMainWindow):
                                 f"{len(converted_files)} images successfully converted.")
 
 
+# def main():
+#     app = QApplication(sys.argv)
+#     StyleHelper.apply_theme(app,theme="dark")
+#     window = ImageFlowMainWindow()
+#     window.show()
+#     sys.exit(app.exec())
+
+# if __name__ == "__main__":
+#     main()
 def main():
     app = QApplication(sys.argv)
-    StyleHelper.apply_theme(app,theme="light")
+
+    splash_image_path = os.path.abspath("ui/graphics/splash.png")
+    if not os.path.exists(splash_image_path):
+        print(f"Error: Splash image not found at {splash_image_path}")
+        return
+
+    splash_pixmap = QPixmap(splash_image_path)
+    splash = QSplashScreen(splash_pixmap, Qt.WindowType.FramelessWindowHint)
+    splash.show()
+
+    app.processEvents()
+
+    StyleHelper.apply_theme(app, theme="dark")
     window = ImageFlowMainWindow()
+    splash.finish(window)
     window.show()
     sys.exit(app.exec())
 
