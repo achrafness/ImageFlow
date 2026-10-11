@@ -359,9 +359,13 @@ class ImageFlowMainWindow(QMainWindow):
         conversion_layout = QVBoxLayout(conversion_tab)
 
         # Files Group
-        files_group = QGroupBox("Image Files")
+        files_group = QGroupBox("Image Files - drag and drop files or folders here")
         files_layout = QHBoxLayout(files_group)
         self.files_list = QListWidget()
+        self.files_list.setSelectionMode(QListWidget.SelectionMode.ExtendedSelection)
+
+        # Images and folders can be dropped anywhere on the window
+        self.setAcceptDrops(True)
         
         # File Actions Buttons
         # file_actions_layout = QVBoxLayout()
@@ -465,11 +469,42 @@ class ImageFlowMainWindow(QMainWindow):
             "Image Files (*.jpg *.jpeg *.png *.webp *.tiff *.tif *.bmp *.gif *.heic *.heif "
             "*.JPG *.JPEG *.PNG *.WEBP *.TIFF *.TIF *.BMP *.GIF *.HEIC *.HEIF);;All Files (*)"
         )
+        self.add_paths(files)
+
+    def add_paths(self, files):
+        """Add files to the conversion list, returns how many were new."""
+        added = 0
         for file in files:
             # Prevent duplicates
             if self.files_list.findItems(file, Qt.MatchFlag.MatchExactly):
                 continue
             self.files_list.addItem(file)
+            added += 1
+        return added
+
+    def dragEnterEvent(self, event):
+        """Accept files and folders dragged from the file manager."""
+        if event.mimeData().hasUrls():
+            event.acceptProposedAction()
+
+    def dropEvent(self, event):
+        """Add dropped images, and every image found inside dropped folders."""
+        files = []
+        for url in event.mimeData().urls():
+            path = url.toLocalFile()
+            if os.path.isdir(path):
+                files.extend(ImageConverter.find_images(path))
+            elif os.path.isfile(path) and ImageConverter.is_image_file(path):
+                files.append(path)
+
+        added = self.add_paths(files)
+        if added:
+            self.progress_label.setText(f"{added} images added")
+        elif files:
+            self.progress_label.setText("These images are already in the list")
+        else:
+            self.progress_label.setText("No supported images found in what was dropped")
+        event.acceptProposedAction()
 
     def remove_files(self):
         """Remove selected files from conversion list."""

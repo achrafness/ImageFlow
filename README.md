@@ -1,77 +1,83 @@
-# ImageFlow
-[![Latest release](https://img.shields.io/github/v/release/achrafness/ImageFlow)](https://github.com/achrafness/ImageFlow/releases/latest)
-### cross-platform, image format conversion GUI tool, built with Python.
-<p>Often times we need to convert different images from one format to another, especially from .HEIC to .JPG or .PNG, due to .HEIC's incompatibilty with design software like photoshop.<br>
-There are already many free online solutions, but when we have a decent amount of images to convert, they tend take some time to upload, that is where our tool comes into play, no need to upload your images anymore, just convert them right away on your computer, completely offline.<br>
+<h1 align="center">ImageFlow</h1>
 
-## Demo
+<p align="center">
+  <b>Convert iPhone HEIC photos to JPG or PNG, in bulk, completely offline.</b><br>
+  No upload, no account, no limits. Your photos never leave your computer.
+</p>
+
+<p align="center">
+  <a href="https://github.com/achrafness/ImageFlow/releases/latest"><img src="https://img.shields.io/github/v/release/achrafness/ImageFlow" alt="Latest release"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="MIT license"></a>
+  <img src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-blue" alt="Windows, macOS and Linux">
+</p>
+
+<p align="center">
+  <a href="https://github.com/achrafness/ImageFlow/releases/latest/download/ImageFlow-windows.exe"><b>Download for Windows</b></a>
+  &nbsp;·&nbsp;
+  <a href="https://github.com/achrafness/ImageFlow/releases/latest/download/ImageFlow-macos.zip"><b>Download for macOS</b></a>
+  &nbsp;·&nbsp;
+  <a href="https://github.com/achrafness/ImageFlow/releases/latest/download/ImageFlow-linux.tar.gz"><b>Download for Linux</b></a>
+</p>
+
 <p align="center">
   <img src="screenshots/demo.gif" alt="ImageFlow demo: adding images, choosing a format and converting" width="555">
 </p>
 
-## Technologies used
-- PyQt6.
-- Pillow + pillow-heif (image conversion, no system libraries needed).
+## Why ImageFlow
+Photos taken on an iPhone are saved as `.HEIC`, which Photoshop, many websites and older software cannot open. Online converters work, but uploading hundreds of photos is slow and hands your pictures to someone else's server. ImageFlow converts them on your own machine in one go.
 
-## Installation
-If just want to use the application, you can download the executable for Windows, macOS or Linux from the [latest release](https://github.com/achrafness/ImageFlow/releases/latest), and if you want to run it manually with python, do the following:
-- clone the repository.
-- run the command (preferably in a virtual environment)
-```bash 
-pip install -r requirements.txt
+## Features
+- **Batch conversion:** convert hundreds of images in one click.
+- **Drag and drop:** drop images or whole folders onto the window; folders are searched for images, including sub-folders.
+- **8 formats:** JPG, JPEG, PNG, WEBP, TIFF, BMP, GIF and HEIC, both as input and output.
+- **Fully offline:** nothing is uploaded and no internet connection is needed.
+- **Safe by default:** existing files are never overwritten, a clashing name becomes `name (1).jpg`.
+- **Keeps what matters:** EXIF metadata is preserved, and animated GIF / WEBP keep their frames.
+- **Dark and light themes.**
+
+## Install
+Download the file for your system from the links above, or from the [latest release](https://github.com/achrafness/ImageFlow/releases/latest). Python is not required.
+
+| System | How to run |
+| --- | --- |
+| Windows | Double-click `ImageFlow-windows.exe`. |
+| macOS | Unzip `ImageFlow-macos.zip` and open `ImageFlow.app`. |
+| Linux | `tar -xzf ImageFlow-linux.tar.gz && ./ImageFlow` |
+
+The executables are not code-signed yet, so the first launch shows a warning:
+- **Windows:** click *More info*, then *Run anyway*.
+- **macOS:** right-click the app, choose *Open*, then *Open* again.
+
+On Linux, if the app does not start with an error about the Qt `xcb` plugin, install one system package: `sudo apt install libxcb-cursor0`.
+
+## Run from source
+Requires Python 3.9 or newer.
+```bash
+git clone https://github.com/achrafness/ImageFlow.git
+cd ImageFlow
+python -m venv .venv
+.venv/bin/pip install -r requirements.txt      # Windows: .venv\Scripts\pip
+.venv/bin/python ImageFlow.py                  # Windows: .venv\Scripts\python
 ```
-- after installing the dependencies, run the app using
-```bash 
-python ImageFlow.py
-```
 
-Python 3.9 or newer is required. Everything else is installed by pip, on Windows, macOS and Linux.<br>
-On some Linux distributions Qt also needs the `libxcb-cursor0` system package (`sudo apt install libxcb-cursor0`).
-
-## Building a standalone executable
-An executable has to be built on the OS it is meant for:
+## Build the executable yourself
+An executable has to be built on the system it is meant for:
 ```bash
 pip install -r requirements.txt pyinstaller
 pyinstaller ImageFlow.spec
 ```
-The result is in the `dist` folder and runs without Python installed.<br>
-The `Build executables` GitHub Actions workflow builds it for Windows, macOS and Linux.
+The result is in the `dist` folder.
 
-## Releases
-The current version is in `version.py`. To publish a new release, update it, then tag and push:
-```bash
-git tag v1.0.0
-git push origin v1.0.0
-```
-The workflow builds the three executables and attaches them to a new GitHub release.
+## Contributing
+Bug reports, ideas and pull requests are welcome, please open an [issue](https://github.com/achrafness/ImageFlow/issues) first for bigger changes.
 
-## Requirements
+To publish a release, update the version in `version.py`, then push a matching tag (`git tag v1.2.0 && git push origin v1.2.0`). The `Build executables` workflow builds the Windows, macOS and Linux executables and attaches them to a new GitHub release.
 
-### Functional Requirements
+## Built with
+[PyQt6](https://pypi.org/project/PyQt6/), [Pillow](https://python-pillow.org/) and [pillow-heif](https://github.com/bigcat88/pillow_heif).
 
-1. **Image Format Conversion:**
-   - The tool should support conversion between multiple image formats, including .HEIC, .JPG, .PNG, and potentially other formats commonly used in design and photography.
-   - The conversion process should be efficient and handle multiple images at once, allowing batch processing.
+## Authors
+Developed by Achraf Nessighaoui and Hamza Rouabah.
 
-2. **Offline Usage:**
-   - The application must work fully offline to ensure user data privacy and eliminate dependency on internet connectivity.
-   - Users can convert images directly on their local machine without any upload requirement.
-
-3. **User Interface (UI):**
-   - Provide a simple and intuitive UI for selecting files, setting the output format, and choosing the destination folder.
-   - The interface should include options to view and preview selected images, add or remove files from the conversion list, and display conversion progress.
-   - Error messages and alerts should be user-friendly, guiding the user on any issues (e.g., unsupported formats or errors in the conversion process).
-
-### Non-Functional Requirements
-
-1. **Performance:**
-   - Ensure efficient conversion times for large batches of images.
-
-2. **Cross-Platform Compatibility:**
-   - The application should run on Windows, macOS, and Linux.
-
-3. **Security:**
-   - Ensure no sensitive data is saved or transmitted; conversions happen entirely offline.
-
-4. **Scalability:**
-   - The tool should handle large numbers of images (100+ at a time) without crashing or slowing down considerably.
+## License
+[MIT](LICENSE)

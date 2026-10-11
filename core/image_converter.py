@@ -12,6 +12,9 @@ class ImageConverter:
     # Ordered, so the format list looks the same on every run
     SUPPORTED_FORMATS = ("jpg", "jpeg", "png", "webp", "tiff", "bmp", "gif", "heic")
 
+    # File extensions that can be opened as source images
+    INPUT_EXTENSIONS = (".jpg", ".jpeg", ".png", ".webp", ".tiff", ".tif", ".bmp", ".gif", ".heic", ".heif")
+
     # Extension -> Pillow format name
     PILLOW_FORMATS = {
         "jpg": "JPEG",
@@ -42,6 +45,23 @@ class ImageConverter:
         - bool: True if the format is supported, False otherwise.
         """
         return format.lower() in cls.SUPPORTED_FORMATS
+
+    @classmethod
+    def is_image_file(cls, path: str) -> bool:
+        """
+        Checks if a file looks like a supported source image, based on its extension.
+        """
+        return path.lower().endswith(cls.INPUT_EXTENSIONS)
+
+    @classmethod
+    def find_images(cls, folder: str) -> List[str]:
+        """
+        Returns every supported image inside a folder and its sub-folders, sorted.
+        """
+        found = []
+        for root, _, names in os.walk(folder):
+            found.extend(os.path.join(root, name) for name in names if cls.is_image_file(name))
+        return sorted(found)
 
     @staticmethod
     def _unique_path(path: str) -> str:
