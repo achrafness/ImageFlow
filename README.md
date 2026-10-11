@@ -4,10 +4,10 @@
 <p>Often times we need to convert different images from one format to another, especially from .HEIC to .JPG or .PNG, due to .HEIC's incompatibilty with design software like photoshop.<br>
 There are already many free online solutions, but when we have a decent amount of images to convert, they tend take some time to upload, that is where our tool comes into play, no need to upload your images anymore, just convert them right away on your computer, completely offline.<br>
 
-## Screenshots
-| Dark | Light |
-| :---: | :---: |
-| ![ImageFlow dark theme](screenshots/dark.png) | ![ImageFlow light theme](screenshots/light.png) |
+## Demo
+<p align="center">
+  <img src="screenshots/demo.gif" alt="ImageFlow demo: adding images, choosing a format and converting" width="555">
+</p>
 
 ## Technologies used
 - PyQt6.
