@@ -6,7 +6,7 @@ from PyQt6.QtWidgets import (
     QLabel, QFileDialog, QComboBox, QListWidget, QWidget, QMessageBox, 
     QProgressBar, QGroupBox, QTabWidget, QGridLayout, QSplashScreen
 )
-from PyQt6.QtCore import Qt, QThread, pyqtSignal
+from PyQt6.QtCore import Qt, QThread, QTimer, pyqtSignal
 from PyQt6.QtGui import QIcon, QPalette, QColor, QPixmap
 
 from core.image_converter import ImageConverter
@@ -14,12 +14,65 @@ from version import __version__
 
 # Resolved from this file, so the graphics are found whatever the working
 # directory is, and inside a PyInstaller bundle too.
+SPLASH_DURATION_MS = 2000
+
 GRAPHICS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "graphics")
 
 
 def resource_path(name):
     """Return the absolute path of a file in ui/graphics, with forward slashes."""
     return os.path.join(GRAPHICS_DIR, name).replace("\\", "/")
+
+
+def app_icon():
+    """Application icon (.ico on Windows, .png everywhere else)."""
+    return QIcon(resource_path('logo.ico' if sys.platform == 'win32' else 'logo.png'))
+
+
+def install_desktop_entry():
+    """
+    Register the app with the Linux desktop (menu entry + icon).
+
+    Wayland desktops such as GNOME ignore the window icon set by the
+    application, they only show the icon of the matching .desktop file.
+    """
+    try:
+        data_home = os.environ.get("XDG_DATA_HOME") or os.path.expanduser("~/.local/share")
+        icon_dir = os.path.join(data_home, "icons", "hicolor", "256x256", "apps")
+        apps_dir = os.path.join(data_home, "applications")
+        os.makedirs(icon_dir, exist_ok=True)
+        os.makedirs(apps_dir, exist_ok=True)
+
+        # The icon is copied out, a PyInstaller bundle only unpacks it temporarily
+        icon_path = os.path.join(icon_dir, "imageflow.png")
+        with open(resource_path("logo.png"), "rb") as f:
+            icon_data = f.read()
+        if not os.path.exists(icon_path) or open(icon_path, "rb").read() != icon_data:
+            with open(icon_path, "wb") as f:
+                f.write(icon_data)
+
+        if getattr(sys, "frozen", False):
+            command = f'"{sys.executable}"'
+        else:
+            command = f'"{sys.executable}" "{os.path.abspath(sys.argv[0])}"'
+
+        entry = (
+            "[Desktop Entry]\n"
+            "Type=Application\n"
+            "Name=ImageFlow\n"
+            "Comment=Offline image format converter\n"
+            f"Exec={command}\n"
+            f"Icon={icon_path}\n"
+            "Terminal=false\n"
+            "Categories=Graphics;\n"
+            "StartupWMClass=ImageFlow\n"
+        )
+        entry_path = os.path.join(apps_dir, "ImageFlow.desktop")
+        if not os.path.exists(entry_path) or open(entry_path).read() != entry:
+            with open(entry_path, "w") as f:
+                f.write(entry)
+    except OSError as e:
+        logging.warning(f"Could not register the desktop entry: {e}")
 
 
 # class SplashScreen(QSplashScreen):
@@ -274,7 +327,7 @@ class ImageFlowMainWindow(QMainWindow):
         super().__init__()
         self.setWindowTitle(f"ImageFlow {__version__} - Image Converter")
         self.resize(555, 910)
-        self.setWindowIcon(QIcon(resource_path('logo.ico')))
+        self.setWindowIcon(app_icon())
 
         # Setup logging
         logging.basicConfig(level=logging.INFO, 
@@ -484,9 +537,16 @@ class ImageFlowMainWindow(QMainWindow):
 # if __name__ == "__main__":
 #     main()
 def main():
+    if sys.platform.startswith("linux"):
+        # Must match the name of the .desktop file so the desktop finds the icon,
+        # and be set before the application connects to the display
+        QApplication.setDesktopFileName("ImageFlow")
+        install_desktop_entry()
+
     app = QApplication(sys.argv)
     app.setApplicationName("ImageFlow")
     app.setApplicationVersion(__version__)
+    app.setWindowIcon(app_icon())
 
     # The splash screen is optional, the app still starts without it
     splash = None
@@ -506,9 +566,13 @@ def main():
         window.resize(min(window.width(), available.width() - 40),
                       min(window.height(), available.height() - 80))
 
-    window.show()
-    if splash:
-        splash.finish(window)
+    def show_window():
+        window.show()
+        if splash:
+            splash.finish(window)
+
+    # Startup is fast, keep the splash on screen long enough to be seen
+    QTimer.singleShot(SPLASH_DURATION_MS if splash else 0, show_window)
     sys.exit(app.exec())
 
 if __name__ == "__main__":
