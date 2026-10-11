@@ -1,14 +1,20 @@
 # ImageFlow
+[![Latest release](https://img.shields.io/github/v/release/achrafness/ImageFlow)](https://github.com/achrafness/ImageFlow/releases/latest)
 ### cross-platform, image format conversion GUI tool, built with Python.
 <p>Often times we need to convert different images from one format to another, especially from .HEIC to .JPG or .PNG, due to .HEIC's incompatibilty with design software like photoshop.<br>
 There are already many free online solutions, but when we have a decent amount of images to convert, they tend take some time to upload, that is where our tool comes into play, no need to upload your images anymore, just convert them right away on your computer, completely offline.<br>
 
+## Screenshots
+| Dark | Light |
+| :---: | :---: |
+| ![ImageFlow dark theme](screenshots/dark.png) | ![ImageFlow light theme](screenshots/light.png) |
+
 ## Technologies used
 - PyQt6.
-- more later... :)
+- Pillow + pillow-heif (image conversion, no system libraries needed).
 
 ## Installation
-If just want to use the application, you can download the windows executable [here](https://google.com), and if you are on a different OS or want to run it manually with python, do the following:
+If just want to use the application, you can download the executable for Windows, macOS or Linux from the [latest release](https://github.com/achrafness/ImageFlow/releases/latest), and if you want to run it manually with python, do the following:
 - clone the repository.
 - run the command (preferably in a virtual environment)
 ```bash 
@@ -18,6 +24,26 @@ pip install -r requirements.txt
 ```bash 
 python ImageFlow.py
 ```
+
+Python 3.9 or newer is required. Everything else is installed by pip, on Windows, macOS and Linux.<br>
+On some Linux distributions Qt also needs the `libxcb-cursor0` system package (`sudo apt install libxcb-cursor0`).
+
+## Building a standalone executable
+An executable has to be built on the OS it is meant for:
+```bash
+pip install -r requirements.txt pyinstaller
+pyinstaller ImageFlow.spec
+```
+The result is in the `dist` folder and runs without Python installed.<br>
+The `Build executables` GitHub Actions workflow builds it for Windows, macOS and Linux.
+
+## Releases
+The current version is in `version.py`. To publish a new release, update it, then tag and push:
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+```
+The workflow builds the three executables and attaches them to a new GitHub release.
 
 ## Requirements
 

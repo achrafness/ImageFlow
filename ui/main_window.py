@@ -1,17 +1,25 @@
 import os
-import time
 import sys
 import logging
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QPushButton, QVBoxLayout, QHBoxLayout, 
     QLabel, QFileDialog, QComboBox, QListWidget, QWidget, QMessageBox, 
-    QProgressBar, QGroupBox, QTabWidget, QTableWidget, QTableWidgetItem,
-    QHeaderView, QDialog, QGridLayout, QSplashScreen
+    QProgressBar, QGroupBox, QTabWidget, QGridLayout, QSplashScreen
 )
-from PyQt6.QtCore import Qt, QThread, pyqtSignal, QSize, QTimer
-from PyQt6.QtGui import QIcon, QFont, QPalette, QColor, QPixmap
+from PyQt6.QtCore import Qt, QThread, pyqtSignal
+from PyQt6.QtGui import QIcon, QPalette, QColor, QPixmap
 
 from core.image_converter import ImageConverter
+from version import __version__
+
+# Resolved from this file, so the graphics are found whatever the working
+# directory is, and inside a PyInstaller bundle too.
+GRAPHICS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "graphics")
+
+
+def resource_path(name):
+    """Return the absolute path of a file in ui/graphics, with forward slashes."""
+    return os.path.join(GRAPHICS_DIR, name).replace("\\", "/")
 
 
 # class SplashScreen(QSplashScreen):
@@ -171,7 +179,7 @@ class StyleHelper:
                 width: 16px;
                 height: 16px;
                 margin-right: 6px;
-                image: url({"ui/graphics/drk_dwn.png" if theme == 'dark' else "ui/graphics/lt_dwn.png"});
+                image: url("{resource_path('drk_dwn.png' if theme == 'dark' else 'lt_dwn.png')}");
             }}
             
             QComboBox QAbstractItemView {{
@@ -201,7 +209,6 @@ class StyleHelper:
                 background-color: {colors['surface']};
                 border-radius: 0px;
             }}
-            QIcon{{margin: 4px;}}
             QTabBar::tab {{
                 background-color: {colors['primary']};
                 color: {'#FFFFFF' if theme == 'dark' else '#FFFFFF'};
@@ -241,7 +248,7 @@ class StyleHelper:
         
 class ConversionThread(QThread):
     conversion_progress = pyqtSignal(int, int)
-    conversion_complete = pyqtSignal(list)
+    conversion_complete = pyqtSignal(list, list)
 
     def __init__(self, files, output_format, output_directory):
         super().__init__()
@@ -251,20 +258,23 @@ class ConversionThread(QThread):
 
     def run(self):
         converted_files = []
+        failed_files = []
         for i, file in enumerate(self.files, 1):
             result = ImageConverter.convert_image(file, self.output_directory, self.output_format)
             if result:
                 converted_files.append(result)
+            else:
+                failed_files.append(file)
             self.conversion_progress.emit(i, len(self.files))
         
-        self.conversion_complete.emit(converted_files)
+        self.conversion_complete.emit(converted_files, failed_files)
 
 class ImageFlowMainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("ImageFlow - Image Converter")
-        self.setGeometry(650, 100, 555, 910)
-        self.setWindowIcon(QIcon('ui/graphics/logo.ico'))  
+        self.setWindowTitle(f"ImageFlow {__version__} - Image Converter")
+        self.resize(555, 910)
+        self.setWindowIcon(QIcon(resource_path('logo.ico')))
 
         # Setup logging
         logging.basicConfig(level=logging.INFO, 
@@ -279,7 +289,7 @@ class ImageFlowMainWindow(QMainWindow):
         header_layout = QHBoxLayout()
         self.theme_toggle = QPushButton()
         self.theme_toggle.setObjectName("themeToggleButton")
-        self.theme_toggle.setIcon(QIcon('ui/graphics/dark.png'))  # You'll need to add these icons
+        self.theme_toggle.setIcon(QIcon(resource_path('dark.png')))
         self.theme_toggle.setFixedSize(40, 40)
         self.theme_toggle.setToolTip("Toggle Dark/Light Mode")
         self.theme_toggle.clicked.connect(self.toggle_theme)
@@ -317,9 +327,7 @@ class ImageFlowMainWindow(QMainWindow):
                 # File Actions Buttons
         file_actions_layout = QVBoxLayout()
         add_files_btn = QPushButton("Add Files")
-        add_files_btn.setIcon(QIcon('add_icon.png'))  # Use appropriate icon
         remove_files_btn = QPushButton("Remove Files")
-        remove_files_btn.setIcon(QIcon('remove_icon.png'))  # Use appropriate icon
         
         file_actions_layout.addWidget(add_files_btn)
         file_actions_layout.addWidget(remove_files_btn)
@@ -334,7 +342,7 @@ class ImageFlowMainWindow(QMainWindow):
         
         format_label = QLabel("Output Format:")
         self.format_combo = QComboBox()
-        self.format_combo.addItems(list(ImageConverter.SUPPORTED_FORMATS))
+        self.format_combo.addItems(ImageConverter.SUPPORTED_FORMATS)
         
         output_dir_label = QLabel("Output Directory:")
         self.output_dir_btn = QPushButton("Select Output Directory")
@@ -350,14 +358,12 @@ class ImageFlowMainWindow(QMainWindow):
         self.progress_label = QLabel("Ready to convert")
 
         # Convert Button
-        convert_btn = QPushButton("Convert Images")
-        convert_btn.setIcon(QIcon('convert_icon.png'))  # Use appropriate icon
-
+        self.convert_btn = QPushButton("Convert Images")
 
         # Add to Conversion Layout
         conversion_layout.addWidget(files_group)
         conversion_layout.addWidget(options_group)
-        conversion_layout.addWidget(convert_btn)
+        conversion_layout.addWidget(self.convert_btn)
         conversion_layout.addWidget(self.progress_label)
         conversion_layout.addWidget(self.progress_bar)
 
@@ -373,10 +379,10 @@ class ImageFlowMainWindow(QMainWindow):
         add_files_btn.clicked.connect(self.add_files)
         remove_files_btn.clicked.connect(self.remove_files)
         self.output_dir_btn.clicked.connect(self.select_output_directory)
-        convert_btn.clicked.connect(self.start_conversion)
+        self.convert_btn.clicked.connect(self.start_conversion)
 
-        # Store current theme
-        self.current_theme = "light"
+        # Store current theme (main() starts the app with the dark theme)
+        self.current_theme = "dark"
 
     def toggle_theme(self):
         """Toggle between light and dark themes."""
@@ -391,8 +397,10 @@ class ImageFlowMainWindow(QMainWindow):
             
     def select_output_directory(self):
         """Select output directory for conversions."""
-        self.output_directory = QFileDialog.getExistingDirectory(self, "Select Output Directory")
-        if self.output_directory:
+        directory = QFileDialog.getExistingDirectory(self, "Select Output Directory")
+        # Keep the previous choice if the dialog was cancelled
+        if directory:
+            self.output_directory = directory
             self.output_dir_btn.setText(f"Selected: {self.output_directory}")
 
     def add_files(self):
@@ -401,7 +409,8 @@ class ImageFlowMainWindow(QMainWindow):
             self, 
             "Select Images", 
             "", 
-            "Image Files (*.jpg *.jpeg *.png *.webp *.tiff *.bmp *.gif *.heic)"
+            "Image Files (*.jpg *.jpeg *.png *.webp *.tiff *.tif *.bmp *.gif *.heic *.heif "
+            "*.JPG *.JPEG *.PNG *.WEBP *.TIFF *.TIF *.BMP *.GIF *.HEIC *.HEIF);;All Files (*)"
         )
         for file in files:
             # Prevent duplicates
@@ -427,6 +436,11 @@ class ImageFlowMainWindow(QMainWindow):
             QMessageBox.warning(self, "Error", "Please select an output directory")
             return
 
+        # Only one conversion at a time
+        self.convert_btn.setEnabled(False)
+        self.progress_bar.setMaximum(len(files))
+        self.progress_bar.setValue(0)
+
         self.conversion_thread = ConversionThread(files, output_format, self.output_directory)
         self.conversion_thread.conversion_progress.connect(self.update_progress)
         self.conversion_thread.conversion_complete.connect(self.conversion_finished)
@@ -438,12 +452,26 @@ class ImageFlowMainWindow(QMainWindow):
         self.progress_bar.setValue(current)
         self.progress_label.setText(f"Converting: {current}/{total} images")
 
-    def conversion_finished(self, converted_files):
+    def conversion_finished(self, converted_files, failed_files):
         """Handle conversion completion."""
+        self.convert_btn.setEnabled(True)
         self.progress_bar.setValue(self.progress_bar.maximum())
         self.progress_label.setText(f"Conversion complete. {len(converted_files)} images converted.")
-        QMessageBox.information(self, "Conversion Complete", 
-                                f"{len(converted_files)} images successfully converted.")
+        if failed_files:
+            QMessageBox.warning(self, "Conversion Complete",
+                                f"{len(converted_files)} images successfully converted.\n"
+                                f"{len(failed_files)} could not be converted:\n"
+                                + "\n".join(os.path.basename(f) for f in failed_files[:10])
+                                + ("\n..." if len(failed_files) > 10 else ""))
+        else:
+            QMessageBox.information(self, "Conversion Complete", 
+                                    f"{len(converted_files)} images successfully converted.")
+
+    def closeEvent(self, event):
+        """Let a running conversion finish before the window is destroyed."""
+        if self.conversion_thread and self.conversion_thread.isRunning():
+            self.conversion_thread.wait()
+        super().closeEvent(event)
 
 
 # def main():
@@ -457,22 +485,30 @@ class ImageFlowMainWindow(QMainWindow):
 #     main()
 def main():
     app = QApplication(sys.argv)
+    app.setApplicationName("ImageFlow")
+    app.setApplicationVersion(__version__)
 
-    splash_image_path = os.path.abspath("ui/graphics/splash.png")
-    if not os.path.exists(splash_image_path):
-        print(f"Error: Splash image not found at {splash_image_path}")
-        return
-
-    splash_pixmap = QPixmap(splash_image_path)
-    splash = QSplashScreen(splash_pixmap, Qt.WindowType.FramelessWindowHint)
-    splash.show()
-
-    app.processEvents()
+    # The splash screen is optional, the app still starts without it
+    splash = None
+    splash_pixmap = QPixmap(resource_path("splash.png"))
+    if not splash_pixmap.isNull():
+        splash = QSplashScreen(splash_pixmap, Qt.WindowType.FramelessWindowHint)
+        splash.show()
+        app.processEvents()
 
     StyleHelper.apply_theme(app, theme="dark")
     window = ImageFlowMainWindow()
-    splash.finish(window)
+
+    # Keep the window inside the screen on small displays
+    screen = app.primaryScreen()
+    if screen:
+        available = screen.availableGeometry()
+        window.resize(min(window.width(), available.width() - 40),
+                      min(window.height(), available.height() - 80))
+
     window.show()
+    if splash:
+        splash.finish(window)
     sys.exit(app.exec())
 
 if __name__ == "__main__":

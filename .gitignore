@@ -4,3 +4,5 @@ __pycache__/
 design
 dist
 build
+venv/
+.venv/
